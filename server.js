@@ -10,6 +10,8 @@ var Patient= require('./models/Patient')
 var Doc= require('./models/Doctor')
 var Activity = require ('./models/Activity')
 var Chats = require ('./models/Chat')
+var DocSchedule=require('./models/Schedule')
+var Appointment=require('./models/Appointment')
 var mongoose = require('mongoose')
 const client = require('socket.io').listen(server).sockets;
 
@@ -178,7 +180,73 @@ app.put('/api/getChats', (req, res) => { //get messages of a chat from conversat
         return res.json({ err: "Valid UID is required" })
     }
 })
-
+// Doc Schedule Module 
+app.post('/api/createSchedule',(req,res)=>{
+    DocSchedule.create(req.body,(err,docs)=>{
+        if(err){
+            res.json(handleError(err))
+        }
+        else{
+            res.json(handleSuccess(docs))
+        }
+    })
+})
+//Schedule by each firebase ID 
+app.post('/api/getSchedules',(req,res)=>{
+       DocSchedule.find({firebaseUID:req.body.firebaseUID},(err,doc)=>{
+           if(err){
+               res.json(handleError(err))
+           }
+           else{
+               res.json(handleSuccess(doc))
+           }
+       })
+})
+app.put('/api/updateTime',(req,res)=>{
+DocSchedule.findByIdAndUpdate('5f37d1f4f45ad532fc7b9c1c',{$set:{ [`schedule.${0}.ranges.${2}`] :  {
+        "_id": "5f37d1f4f45ad532fc7b9c20",
+        "from": "21:00",
+        "to": "23:00"
+    } }},{new:true},(err,docs)=>{
+        if(err)
+        console.log(err)
+        else{
+       console.log(docs)
+       res.json({
+           message:"Success",
+           docs
+       })
+        } 
+       })
+})
+// Sort By Days retrival of schedule
+app.post('/api/scheduleByDay',(req,res)=>{
+DocSchedule.aggregate([{$match:{firebaseUID:req.body.firebaseUID}},{$unwind:'$schedule'}, {$sort:{'schedule.day':1}}],(err,docs)=>{
+    if(err)
+    console.log(err)
+    else{
+   console.log(docs)
+   res.json({
+       message:"Success",
+       docs
+   })
+    } 
+   })
+})
+// Retrieve of Slot By patient perspective
+app.post('/api/getByPatient',(req,res)=>{
+DocSchedule.aggregate([{$match:{firebaseUID:req.body.firebaseUID}},{$unwind:'$schedule'}, {$match:{'schedule.day':req.body.day}}],(err,doc)=>{
+    if(err)
+    console.log(err)
+    else{
+   console.log(doc)
+   res.json({
+       message:"Success",
+       doc
+   })
+    } 
+   })
+})
 server.listen(8000);
 // send a message
 console.log('Server has started!');
